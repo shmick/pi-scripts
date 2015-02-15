@@ -1,4 +1,4 @@
-In order to avoid writing temportary files to the SD card, I write out all of my files to a ramdisk
+In order to avoid writing temporary files to the SD card, I write out all of my files to a ramdisk
 
 Add the following to your /etc/fstab file to setup a 64MB ramdisk:
 
