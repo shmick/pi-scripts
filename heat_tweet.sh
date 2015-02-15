@@ -14,17 +14,13 @@ if [[ -e $NESTDATA ]]
 
 then
 
-LATESTINFO=$(cat $NESTDATA)
-
-        HeatOn=$(echo "$LATESTINFO" | grep E_FurnaceOn.*1$)
-	HeatOff=$(echo "$LATESTINFO" | grep E_FurnaceOn.*0$)
-	CoolOn=$(echo "$LATESTINFO" | grep F_AirConOn.*1$)
-	CoolOff=$(echo "$LATESTINFO" | grep F_AirConOn.*0$)
-	OutsideTemp=$(echo "$LATESTINFO" | grep A_OutsideTemp | awk '{print $2}')
-	InsideTemp=$(echo "$LATESTINFO" | grep B_InsideTemp | awk '{print $2}')
-	TargetTemp=$(echo "$LATESTINFO" | grep C_TargetTemp | awk '{print $2}')
-	Humidity=$(echo "$LATESTINFO" | grep D_RelativeHumidity | awk '{print $2}')
-	RelHumid=$(echo "$LATESTINFO" | grep I_OutsideHumidity | awk '{print $2}')
+	HeatMode=$(grep FurnaceOn $NESTDATA | awk '{print $2}')
+	CoolMode=$(grep AirConOn $NESTDATA | awk '{print $2}')
+	OutsideTemp=$(grep OutsideTemp $NESTDATA | awk '{print $2}')
+	InsideTemp=$(grep InsideTemp $NESTDATA | awk '{print $2}')
+	TargetTemp=$(grep TargetTemp $NESTDATA | awk '{print $2}')
+	Humidity=$(grep RelativeHumidity $NESTDATA | awk '{print $2}')
+	RelHumid=$(grep OutsideHumidity $NESTDATA | awk '{print $2}')
 	Time=$(date +%H:%M)
 
 else
@@ -43,61 +39,45 @@ Inside RH = $Humidity% \
 "
 }      
 
-if [[ -e $HEATSTATEFILE ]]
+if [[ -e $HEATSTATEFILE ]] && [[ -e $COOLSTATEFILE ]]
 
 then 
 	HEATSTATE=$(cat $HEATSTATEFILE)
 
-	if [ "$HeatOn" != "" ] && [ "$HEATSTATE" = 0  ]
+	if [ "$HeatMode" = "1" ] && [ "$HEATSTATE" = 0  ]
 	then
 		Type=Heat
 		Mode=ON
 		gentweet
 		$TWEETCMD "$TweetString"
+		echo 1 > $HEATSTATEFILE
 
-	elif [ "$HeatOff" != "" ] && [ "$HEATSTATE" = 1  ]
+	elif [ "$HeatMode" = "0" ] && [ "$HEATSTATE" = 1  ]
 	then
 		Type=Heat
 		Mode=OFF
 		gentweet
 		$TWEETCMD "$TweetString"
+		echo 0 > $HEATSTATEFILE
 	fi
 
 	COOLSTATE=$(cat $COOLSTATEFILE)
 
-	if [ "$CoolOn" != "" ] && [ "$COOLSTATE" = 0  ]
+	if [ "$CoolMode" = "1" ] && [ "$COOLSTATE" = 0  ]
 	then
 		Type=AC
 		Mode=ON
 		gentweet
 		$TWEETCMD "$TweetString"
+		echo 1 > $COOLSTATEFILE
 
-	elif [ "$CoolOff" != "" ] && [ "$COOLSTATE" = 1  ]
+	elif [ "$CoolMode" = "0" ] && [ "$COOLSTATE" = 1  ]
 	then
 		Type=AC
 		Mode=OFF
 		gentweet
 		$TWEETCMD "$TweetString"
+		echo 0 > $COOLSTATEFILE
 	fi
 fi
 
-#  Update the statefiles
-
-if [[ "$HeatOn" != "" ]]
-then
-	echo 1 > $HEATSTATEFILE
-
-elif [[ "$HeatOff" != "" ]]
-then
-	echo 0 > $HEATSTATEFILE
-
-fi
-
-if [[ "$CoolOn" != "" ]]
-then
-	echo 1 > $COOLSTATEFILE
-
-elif [[ "$CoolOff" != "" ]]
-then
-	echo 0 > $COOLSTATEFILE
-fi
