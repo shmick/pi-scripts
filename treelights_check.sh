@@ -1,13 +1,12 @@
 #!/bin/bash
 
-WEMOCMD=/usr/local/bin/wemo
 WEMODEVICE="Christmas Tree"
 
 WemoToggle () {
 curl -s -o /dev/null -X POST http://localhost:5000/api/device/WeMo%20Christmas%20Tree?state=$MODE
 }
 
-READFILE=/ramdisk/out.csv
+READFILE=/ramdisk/nest-info.txt
 
 if [ ! -f "$READFILE" ]
 then
@@ -18,7 +17,7 @@ STATE=$(curl -s http://localhost:5000/api/device/WeMo%20Christmas%20Tree | grep 
 STATE_ON=$(echo $STATE | grep 1)
 STATE_OFF=$(echo $STATE | grep 0)
 
-AWAY=$(grep C_TargetTemp $READFILE | awk -F, '{print $3}' | grep ^1.00)
+AWAY=$(grep C_TargetTemp $READFILE | awk '{print $2}' | grep ^1.00)
 
 if [ "$AWAY" = "1.00" ]
 then STATUS=Away
