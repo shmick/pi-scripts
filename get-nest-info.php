@@ -1,5 +1,7 @@
 <?php
 
+// The nest-api files are expected to be in $HOME/nest-api/
+
 require_once(__DIR__.'/../nest-api/nest.class.php');
 
 $username = '';
