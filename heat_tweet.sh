@@ -1,7 +1,7 @@
 #!/bin/bash
 # heat_tweet.sh 
 
-# Ensure the Nest update script had time to fiinish
+# Give the get-nest-info.sh cron job a few seconds to finish 
 sleep 5
 
 NESTDATA="/ramdisk/nest-info.txt"
@@ -10,10 +10,11 @@ COOLSTATEFILE="/ramdisk/coolstate"
 
 TWEETCMD="python $HOME/pi-scripts/tweet.py"
 
+GatherData()
+{
 if [[ -e $NESTDATA ]]
 
 then
-
 	HeatMode=$(grep FurnaceOn $NESTDATA | awk '{print $2}')
 	CoolMode=$(grep AirConOn $NESTDATA | awk '{print $2}')
 	OutsideTemp=$(grep OutsideTemp $NESTDATA | awk '{print $2}')
@@ -22,30 +23,17 @@ then
 	Humidity=$(grep RelativeHumidity $NESTDATA | awk '{print $2}')
 	RelHumid=$(grep OutsideHumidity $NESTDATA | awk '{print $2}')
 	Time=$(date +%H:%M)
-
+	TweetString=""
+	Type=""
+	Mode=""
 else
 	echo "Sorry no datafile to read, exiting"
 	exit
 fi
+}
 
-CreateStatusAndTweet()
+StateCheckAndUpdate()
 {
-if [ "$Type" = "" ]
-then
-exit
-else
-TweetString="$Type $Mode at ${Time}, \
-Target = $TargetTemp°C, \
-Inside = $InsideTemp°C, \
-Outside = $OutsideTemp°C, \
-Outside RH = $RelHumid%, \
-Inside RH = $Humidity% \
-"
-
-$TWEETCMD "$TweetString"
-fi
-}      
-
 if [[ -e $HEATSTATEFILE ]] && [[ -e $COOLSTATEFILE ]]
 
 then 
@@ -79,5 +67,35 @@ then
 		echo 0 > $COOLSTATEFILE
 	fi
 fi
+}
 
-CreateStatusAndTweet
+CreateTweet()
+{
+if [ "$Type" = "" ]
+then
+	exit
+else
+	TweetString="$Type $Mode at ${Time}, \
+	Target = $TargetTemp°C, \
+	Inside = $InsideTemp°C, \
+	Outside = $OutsideTemp°C, \
+	Outside RH = $RelHumid%, \
+	Inside RH = $Humidity% \
+	"
+fi
+}
+
+SendTweet()
+{
+if [ "$TweetString" = "" ]
+then
+	exit
+else
+	$TWEETCMD "$TweetString"
+fi
+}      
+
+GatherData
+StateCheckAndUpdate
+CreateTweet
+SendTweet
