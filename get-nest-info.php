@@ -1,9 +1,14 @@
 <?php
 
-// The nest-api files are expected to be in $HOME/nest-api/
+/*
+Requires: https://github.com/gboudreau/nest-api to be installed as $HOME/nest-api/
+
+Change the path to nest.class.php below if needed
+*/
 
 require_once(__DIR__.'/../nest-api/nest.class.php');
 
+// Your Nest username and password
 $username = '';
 $password = '';
 
