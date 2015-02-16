@@ -28,8 +28,12 @@ else
 	exit
 fi
 
-gentweet()
+CreateStatusAndTweet()
 {
+if [ "$Type" = "" ]
+then
+exit
+else
 TweetString="$Type $Mode at ${Time}, \
 Target = $TargetTemp°C, \
 Inside = $InsideTemp°C, \
@@ -37,6 +41,9 @@ Outside = $OutsideTemp°C, \
 Outside RH = $RelHumid%, \
 Inside RH = $Humidity% \
 "
+
+$TWEETCMD "$TweetString"
+fi
 }      
 
 if [[ -e $HEATSTATEFILE ]] && [[ -e $COOLSTATEFILE ]]
@@ -44,40 +51,33 @@ if [[ -e $HEATSTATEFILE ]] && [[ -e $COOLSTATEFILE ]]
 then 
 	HEATSTATE=$(cat $HEATSTATEFILE)
 
-	if [ "$HeatMode" = "1" ] && [ "$HEATSTATE" = 0  ]
+	if [ "$HeatMode" = "1" ] && [ "$HEATSTATE" = "0"  ]
 	then
 		Type=Heat
 		Mode=ON
-		gentweet
-		$TWEETCMD "$TweetString"
 		echo 1 > $HEATSTATEFILE
 
-	elif [ "$HeatMode" = "0" ] && [ "$HEATSTATE" = 1  ]
+	elif [ "$HeatMode" = "0" ] && [ "$HEATSTATE" = "1"  ]
 	then
 		Type=Heat
 		Mode=OFF
-		gentweet
-		$TWEETCMD "$TweetString"
 		echo 0 > $HEATSTATEFILE
 	fi
 
 	COOLSTATE=$(cat $COOLSTATEFILE)
 
-	if [ "$CoolMode" = "1" ] && [ "$COOLSTATE" = 0  ]
+	if [ "$CoolMode" = "1" ] && [ "$COOLSTATE" = "0" ]
 	then
 		Type=AC
 		Mode=ON
-		gentweet
-		$TWEETCMD "$TweetString"
 		echo 1 > $COOLSTATEFILE
 
-	elif [ "$CoolMode" = "0" ] && [ "$COOLSTATE" = 1  ]
+	elif [ "$CoolMode" = "0" ] && [ "$COOLSTATE" = "1"  ]
 	then
 		Type=AC
 		Mode=OFF
-		gentweet
-		$TWEETCMD "$TweetString"
 		echo 0 > $COOLSTATEFILE
 	fi
 fi
 
+CreateStatusAndTweet
