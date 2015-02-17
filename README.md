@@ -1,4 +1,4 @@
-These scripts were written and tested on a Raspberry Pi running Raspbian. They should run on any linux host without issue.
+These scripts were written and tested on a Raspberry Pi running * [Raspbian](http://www.raspbian.org/). They should run on any linux host without issue.
 
 In order to avoid writing transient data to the SD card on the Raspberry Pi, a ramdisk is used to store it.
 
