@@ -3,14 +3,15 @@
 /*
 Requires: https://github.com/gboudreau/nest-api to be installed as $HOME/nest-api/
 
+Your Nest username and password need to be in the nest-userpass.inc file
+
 Change the path to nest.class.php below if needed
 */
 
 require_once(__DIR__.'/../nest-api/nest.class.php');
 
-// Your Nest username and password
-$username = '';
-$password = '';
+$userpass = parse_ini_file('nest-userpass.inc');
+extract($userpass);
 
 date_default_timezone_set('America/Toronto');
 
@@ -28,3 +29,5 @@ printf("F_AirConOn %.0f\n", $device_info->current_state->ac);
 printf("G_FanOn %.0f\n", $device_info->current_state->fan);
 printf("H_Battery %.03f\n", $device_info->current_state->battery_level);
 printf("I_OutsideHumidity %.0f\n", $location_info[0]->outside_humidity);
+
+?>
