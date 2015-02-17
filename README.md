@@ -1,4 +1,6 @@
-In order to avoid writing temporary files to the SD card, I write out all of my files to a ramdisk
+These scripts were written and tested on a Raspberry Pi running Raspbian. They should run on any linux host without issue.
+
+In order to avoid writing transient data to the SD card on the Raspberry Pi, a ramdisk is used to store it.
 
 Add the following to your /etc/fstab file to setup a 64MB ramdisk:
 
@@ -13,4 +15,3 @@ Heat Tweet requires:
 Tree Lights requires:
 
 * [ouimeaux](https://github.com/iancmcc/ouimeaux)
-
