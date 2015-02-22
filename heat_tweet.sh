@@ -78,7 +78,7 @@ then
 		echo 0 > $COOLSTATEFILE
 	fi
 else
-	if [[ -n "$HeatMode" ]] || [[ -n "$CoolMode" ]]
+	if [[ -n "$HeatMode" ]] && [[ -n "$CoolMode" ]]
 	then
 		echo $HeatMode > $HEATSTATEFILE
 		echo $CoolMode > $COOLSTATEFILE
