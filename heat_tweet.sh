@@ -78,8 +78,11 @@ then
 		echo 0 > $COOLSTATEFILE
 	fi
 else
-	echo $HeatMode > $HEATSTATEFILE
-	echo $CoolMode > $COOLSTATEFILE
+	if [[ -n "$HeatMode" ]] || [[ -n "$CoolMode" ]]
+	then
+		echo $HeatMode > $HEATSTATEFILE
+		echo $CoolMode > $COOLSTATEFILE
+	fi
 fi
 }
 
