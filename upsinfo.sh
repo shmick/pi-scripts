@@ -46,7 +46,7 @@ done
 echo "}")
 
 TYPE="Content-Type: application/json"
-TOKEN="X-THINGSPEAKAPIKEY: XXXXXXXXXXXXXXX7"
+TOKEN="X-THINGSPEAKAPIKEY: XXXXXXXXXXXXXXXX"
 URL="https://api.thingspeak.com/update.json"
 PAYLOAD=$(echo $JSON | sed 's/, }/ }/')
 
