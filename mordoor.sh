@@ -1,19 +1,35 @@
 #!/bin/bash
-set -x
 #
 # Monitor and control the garage doors
 #
+# Requires WebIOPi // https://code.google.com/p/webiopi/
 #
 # 0 = closed
 # 1 = open
+#
+# Check https://github.com/shmick/pi-scripts/ for latest version
+#
+# Twitter: @shmick
 
-
-WebIOPi=$(curl -vs -m 3 -o /dev/null http://localhost:8000/GaragePi/html/ 2>&1 | grep "200 OK")
+WebIOPi=$(curl -vs -m 3 -o /dev/null http://localhost:8000/ 2>&1 | grep "200 OK")
 if [ -z "$WebIOPi" ]
 then
 echo "sorry, WebIOPi doesn't appear to be running"
 exit 1
 fi
+
+# How long the door is allowed to remain open during the hours of
+# StartTime and EndTime
+MaxMinutes="30"
+
+# Set this to false if you don't want to enable the auto close feature
+AutoClose=true
+
+# StartTime in HHMM format
+# Default is 8:30PM till 7AM
+# Set these to "0" if you always want it to check
+StartTime="2030"
+EndTime="700"
 
 NDoorSTATEFILE="/ramdisk/ndstate"
 SDoorSTATEFILE="/ramdisk/sdstate"
@@ -78,10 +94,10 @@ then
 		echo 1 > $SDoorSTATEFILE
 	fi
 
-	NDoorAge=$(find $NDoorSTATEFILE -mmin +2)
-	SDoorAge=$(find $SDoorSTATEFILE -mmin +2)
+	NDoorAge=$(find $NDoorSTATEFILE -mmin +$MaxMinutes)
+	SDoorAge=$(find $SDoorSTATEFILE -mmin +$MaxMinutes)
 else
-	if [[ -n "$NorthStatus" ]] && [[ -n "$SouthStatus" ]]
+	if [[ -n "$NorthStatus" ]] || [[ -n "$SouthStatus" ]]
 	then
 		echo $NorthStatus > $NDoorSTATEFILE
 		echo $SouthStatus > $SDoorSTATEFILE
@@ -89,10 +105,17 @@ else
 fi
 }
 
-LateNightCheck() 
+CheckAutoClose() 
 {
-	CloseDoor north
-if [ "$HourMin" -gt "2030" ] || [ "$HourMin" -lt "700" ]
+if [ "$AutoClose" = "true" ]
+then
+AutoClose
+fi
+}
+
+AutoClose() 
+{
+if [ "$HourMin" -gt "$StartTime" ] || [ "$HourMin" -lt "$EndTime" ]
 then
 	if [ -n "$NDoorAge" ] && [ "$NorthStatus" = "1" ]
 	then
@@ -183,4 +206,4 @@ GatherData
 StateCheckAndUpdate
 #CreateTweet
 #SendTweet
-LateNightCheck
+CheckAutoClose
