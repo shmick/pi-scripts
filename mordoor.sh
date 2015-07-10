@@ -10,7 +10,8 @@
 #
 # Check https://github.com/shmick/pi-scripts/ for latest version
 #
-# Twitter: @shmick
+# https://twitter.com/shmick 
+# email: mordoor/ww0/ca 
 
 WebIOPi=$(curl -vs -m 3 -o /dev/null http://localhost:8000/ 2>&1 | grep "200 OK")
 if [ -z "$WebIOPi" ]
