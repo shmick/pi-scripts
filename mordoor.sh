@@ -1,6 +1,7 @@
 #!/bin/bash
 #
-# Monitor and control the garage doors
+# mordoor.sh - Monitor and control the garage doors
+# version=2015.07.10.r1
 #
 # Requires WebIOPi // https://code.google.com/p/webiopi/
 #
@@ -18,32 +19,28 @@ echo "sorry, WebIOPi doesn't appear to be running"
 exit 1
 fi
 
-# How long the door is allowed to remain open during the hours of
-# StartTime and EndTime
-MaxMinutes="30"
-
 # Set this to false if you don't want to enable the auto close feature
 AutoClose=true
 
-# StartTime in HHMM format
 # Default is 8:30PM till 7AM
 # Set these to "0" if you always want it to check
 StartTime="2030"
 EndTime="700"
 
-NDoorSTATEFILE="/ramdisk/ndstate"
-SDoorSTATEFILE="/ramdisk/sdstate"
+# How long the door is allowed to remain open during the hours of StartTime and EndTime
+MaxMinutes="30"
 
-NDoorLOCKFILE="/var/tmp/ndlock"
-SDoorLOCKFILE="/var/tmp/sdlock"
+# Don't change these unless you need to
+NorthDoorStateFile="/ramdisk/ndstate"
+SouthDoorStateFile="/ramdisk/sdstate"
 
-NDoorINUSE="/var/tmp/ndINUSE"
-SDoorINUSE="/var/tmp/sdINUSE"
+NorthDoorLockFile="/var/tmp/ndLockFile"
+SouthDoorLockFile="/var/tmp/sdLockFile"
 
-
+NorthDoorClosing="/var/tmp/ndClosing"
+SouthDoorClosing="/var/tmp/sdClosing"
 
 TWEETCMD="python $HOME/pi-scripts/tweet.py"
-
 
 DoorStatus()
 {
@@ -63,44 +60,44 @@ GatherData()
 
 StateCheckAndUpdate()
 {
-if [[ -e $NDoorSTATEFILE ]] && [[ -e $SDoorSTATEFILE ]]
+if [[ -e $NorthDoorStateFile ]] && [[ -e $SouthDoorStateFile ]]
 
 then 
-	NdoorSTATE=$(cat $NDoorSTATEFILE)
+	NdoorSTATE=$(cat $NorthDoorStateFile)
 
 	if [ "$NorthStatus" = "0" ] && [ "$NdoorSTATE" = "1"  ]
 	then
 		NDoor="closed"
-		echo 0 > $NDoorSTATEFILE
-		rm -f $NDoorLOCKFILE
+		echo 0 > $NorthDoorStateFile
+		rm -f $NorthDoorLockFile
 
 	elif [ "$NorthStatus" = "1" ] && [ "$NdoorSTATE" = "0"  ]
 	then
 		NDoor="open"
-		echo 1 > $NDoorSTATEFILE
+		echo 1 > $NorthDoorStateFile
 	fi
 
-	SDoorSTATE=$(cat $SDoorSTATEFILE)
+	SDoorSTATE=$(cat $SouthDoorStateFile)
 
 	if [ "$SouthStatus" = "0" ] && [ "$SDoorSTATE" = "1" ]
 	then
 		SDoor="closed"
-		echo 0 > $SDoorSTATEFILE
-		rm -f $SDoorLOCKFILE
+		echo 0 > $SouthDoorStateFile
+		rm -f $SouthDoorLockFile
 
 	elif [ "$SouthStatus" = "1" ] && [ "$SDoorSTATE" = "0"  ]
 	then
 		SDoor="open"
-		echo 1 > $SDoorSTATEFILE
+		echo 1 > $SouthDoorStateFile
 	fi
 
-	NDoorAge=$(find $NDoorSTATEFILE -mmin +$MaxMinutes)
-	SDoorAge=$(find $SDoorSTATEFILE -mmin +$MaxMinutes)
+	NDoorAge=$(find $NorthDoorStateFile -mmin +$MaxMinutes)
+	SDoorAge=$(find $SouthDoorStateFile -mmin +$MaxMinutes)
 else
 	if [[ -n "$NorthStatus" ]] || [[ -n "$SouthStatus" ]]
 	then
-		echo $NorthStatus > $NDoorSTATEFILE
-		echo $SouthStatus > $SDoorSTATEFILE
+		echo $NorthStatus > $NorthDoorStateFile
+		echo $SouthStatus > $SouthDoorStateFile
 	fi
 fi
 }
@@ -136,13 +133,13 @@ SelectDoor()
 case $1 in
 north)
 DoorStatus="$NorthStatus" 
-LockFile="$NDoorLOCKFILE" 
-InUse="$NDoorINUSE"
+LockFile="$NorthDoorLockFile" 
+InUse="$NorthDoorClosing"
 ;;
 south)
 DoorStatus="$SouthStatus"
-LockFile="$SDoorLOCKFILE" 
-InUse="$SDoorINUSE"
+LockFile="$SouthDoorLockFile" 
+InUse="$SouthDoorClosing"
 ;;
 esac
 }
@@ -173,9 +170,9 @@ touch $LockFile
 else
 rm -f $InUse
 fi
-
 }
 
+# Sending a tweet is not enabled yet.
 CreateTweet()
 {
 if [ "$Type" = "" ]
