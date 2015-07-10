@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # mordoor.sh - Monitor and control the garage doors
-# version=2015.07.10.r1
+# version=2015.07.10.r2
 #
 # Requires WebIOPi // https://code.google.com/p/webiopi/
 #
@@ -133,11 +133,13 @@ SelectDoor()
 {
 case $1 in
 north)
+DoorName="North"
 DoorStatus="$NorthStatus" 
 LockFile="$NorthDoorLockFile" 
 InUse="$NorthDoorClosing"
 ;;
 south)
+DoorName="South"
 DoorStatus="$SouthStatus"
 LockFile="$SouthDoorLockFile" 
 InUse="$SouthDoorClosing"
@@ -180,13 +182,7 @@ if [ "$Type" = "" ]
 then
 	exit
 else
-	TweetString="$Type $Mode at ${Time}, \
-	Target = $TargetTemp°C, \
-	Inside = $InsideTemp°C, \
-	Outside = $OutsideTemp°C, \
-	Outside RH = $RelHumid%, \
-	Inside RH = $Humidity% \
-	"
+	TweetString="ERROR: The $DoorName door was not successfully closed" 
 fi
 }
 
