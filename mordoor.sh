@@ -1,7 +1,6 @@
 #!/bin/bash
-#
 # mordoor.sh - Monitor and control the garage doors
-# version=2015.07.10.r2
+# version=2015.07.11.r1
 #
 # Requires WebIOPi // https://code.google.com/p/webiopi/
 #
@@ -32,14 +31,16 @@ EndTime="700"
 MaxMinutes="30"
 
 # Don't change these unless you need to
-NorthDoorStateFile="/ramdisk/ndstate"
-SouthDoorStateFile="/ramdisk/sdstate"
+TMPDIR="/var/tmp"
 
-NorthDoorLockFile="/var/tmp/ndLockFile"
-SouthDoorLockFile="/var/tmp/sdLockFile"
+NorthDoorStateFile="$TMPDIR/ndstate"
+SouthDoorStateFile="$TMPDIR/sdstate"
 
-NorthDoorClosing="/var/tmp/ndClosing"
-SouthDoorClosing="/var/tmp/sdClosing"
+NorthDoorLockFile="$TMPDIR/ndLockFile"
+SouthDoorLockFile="$TMPDIR/sdLockFile"
+
+NorthDoorClosing="$TMPDIR/ndClosing"
+SouthDoorClosing="$TMPDIR/sdClosing"
 
 TWEETCMD="python $HOME/pi-scripts/tweet.py"
 
@@ -47,6 +48,13 @@ DoorStatus()
 {
 	NorthStatus=$(curl -s http://localhost:8000/garage/north/status)
 	SouthStatus=$(curl -s http://localhost:8000/garage/south/status)
+
+	case $NorthStatus in
+	0) NorthStatus=closed ;; 1) NorthStatus=open ;;
+	esac
+	case $SouthStatus in
+	0) SouthStatus=closed ;; 1) SouthStatus=open ;;
+	esac
 }
 
 GatherData()
@@ -61,40 +69,47 @@ GatherData()
 
 StateCheckAndUpdate()
 {
-if [[ -e $NorthDoorStateFile ]] && [[ -e $SouthDoorStateFile ]]
+# If the North and Sputh state files exist on the filesystem
+# compare them to the latest status of the doors and update them
+# only if the state has changed.
+if [ -e $NorthDoorStateFile ] && [ -e $SouthDoorStateFile ]
 
 then 
 	NdoorSTATE=$(cat $NorthDoorStateFile)
 
-	if [ "$NorthStatus" = "0" ] && [ "$NdoorSTATE" = "1"  ]
+	if [ "$NorthStatus" = "closed" ] && [ "$NdoorSTATE" = "open"  ]
 	then
-		NDoor="closed"
-		echo 0 > $NorthDoorStateFile
+		echo closed > $NorthDoorStateFile
+		# If the door has changed from open to closed then
+		# delete the lockfile that prevents the auto close
+		# routine from running after a failed close attempt
 		rm -f $NorthDoorLockFile
 
-	elif [ "$NorthStatus" = "1" ] && [ "$NdoorSTATE" = "0"  ]
+	elif [ "$NorthStatus" = "open" ] && [ "$NdoorSTATE" = "closed"  ]
 	then
-		NDoor="open"
-		echo 1 > $NorthDoorStateFile
+		echo open > $NorthDoorStateFile
 	fi
 
 	SDoorSTATE=$(cat $SouthDoorStateFile)
 
-	if [ "$SouthStatus" = "0" ] && [ "$SDoorSTATE" = "1" ]
+	if [ "$SouthStatus" = "closed" ] && [ "$SDoorSTATE" = "open" ]
 	then
-		SDoor="closed"
-		echo 0 > $SouthDoorStateFile
+		echo closed > $SouthDoorStateFile
+		# If the door has changed from open to closed then
+		# delete the lockfile that prevents the auto close
+		# routine from running after a failed close attempt
 		rm -f $SouthDoorLockFile
 
-	elif [ "$SouthStatus" = "1" ] && [ "$SDoorSTATE" = "0"  ]
+	elif [ "$SouthStatus" = "open" ] && [ "$SDoorSTATE" = "closed"  ]
 	then
-		SDoor="open"
-		echo 1 > $SouthDoorStateFile
+		echo open > $SouthDoorStateFile
 	fi
 
 	NDoorAge=$(find $NorthDoorStateFile -mmin +$MaxMinutes)
 	SDoorAge=$(find $SouthDoorStateFile -mmin +$MaxMinutes)
 else
+	# Create the North and South state files based on the current status
+	# of each door
 	if [[ -n "$NorthStatus" ]] || [[ -n "$SouthStatus" ]]
 	then
 		echo $NorthStatus > $NorthDoorStateFile
@@ -113,17 +128,15 @@ fi
 
 AutoClose() 
 {
-if [ "$HourMin" -gt "$StartTime" ] || [ "$HourMin" -lt "$EndTime" ]
+if [ "$HourMin" -ge "$StartTime" ] || [ "$HourMin" -le "$EndTime" ]
 then
-	if [ -n "$NDoorAge" ] && [ "$NorthStatus" = "1" ]
+	if [ -n "$NDoorAge" ] && [ "$NorthStatus" = "open" ]
 	then
-	echo "Close the North door"
 	CloseDoor north
 	fi
 
-	if [ -n "$SDoorAge" ] && [ "$SouthStatus" = "1" ]
+	if [ -n "$SDoorAge" ] && [ "$SouthStatus" = "open" ]
 	then
-	echo "Close the South door"
 	CloseDoor south
 	fi
 fi
@@ -134,15 +147,15 @@ SelectDoor()
 case $1 in
 north)
 DoorName="North"
-DoorStatus="$NorthStatus" 
+DoorState="$NorthStatus" 
 LockFile="$NorthDoorLockFile" 
-InUse="$NorthDoorClosing"
+InProgress="$NorthDoorClosing"
 ;;
 south)
 DoorName="South"
-DoorStatus="$SouthStatus"
+DoorState="$SouthStatus"
 LockFile="$SouthDoorLockFile" 
-InUse="$SouthDoorClosing"
+InProgress="$SouthDoorClosing"
 ;;
 esac
 }
@@ -151,14 +164,15 @@ CloseDoor()
 {
 SelectDoor $@
 
-if [ -f $LockFile ] || [ -f $InUse ]
+if [ -f $LockFile ] || [ -f $InProgress ]
 then
 exit 1
 fi
 
-touch $InUse
+#
+touch $InProgress
 count=1
-while [ $count -le 3 ] && [ $DoorStatus = 1 ]
+while [ $count -le 3 ] && [ "$DoorState" = "open" ]
 do
 curl -d "" http://localhost:8000/garage/$1/button
 sleep 20
@@ -167,11 +181,11 @@ DoorStatus
 SelectDoor $@
 done
 
-if [ $DoorStatus = 1 ]
+if [ "$DoorState" = "open" ]
 then
 touch $LockFile
 else
-rm -f $InUse
+rm -f $InProgress
 fi
 }
 
