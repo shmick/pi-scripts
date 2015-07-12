@@ -1,4 +1,5 @@
 #!/bin/bash
+set -x
 # mordoor.sh - Monitor and control the garage doors
 # version=2015.07.11.r1
 #
@@ -120,10 +121,10 @@ fi
 
 CheckAutoClose() 
 {
-if [ "$AutoClose" = "true" ]
-then
-AutoClose
-fi
+	if [ "$AutoClose" = "true" ]
+	then
+	AutoClose
+	fi
 }
 
 AutoClose() 
