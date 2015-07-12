@@ -29,6 +29,9 @@ EndTime="700"
 # How long the door is allowed to remain open during the hours of StartTime and EndTime
 MaxMinutes="30"
 
+# Set to true to enable sending a tweet
+Twitter=false
+
 # Change to "@whateveryouwant" to send a tweet
 TweetTo=""
 
@@ -215,7 +218,7 @@ SendTweet()
 {
 # Send a tweet only once. The TweetFile will also be removed once the
 # door has returned to a closed state.
-if [ ! -f "$TweetFile" ]
+if [ ! -f "$TweetFile" ] && [ "$Twitter" = "true" ]
 then
 	TweetString="ERROR: Unable to auto close $DoorName door at ${Time} $TweetTo" 
 	$TWEETCMD "$TweetString"
