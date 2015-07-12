@@ -1,7 +1,6 @@
 #!/bin/bash
-set -x
 # mordoor.sh - Monitor and control the garage doors
-# version=2015.07.11.r1
+# version=2015.07.11.r2
 #
 # Requires WebIOPi // https://code.google.com/p/webiopi/
 #
