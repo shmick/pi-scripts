@@ -1,42 +1,38 @@
 #!/bin/bash
 # mordoor.sh - Monitor and control the garage doors
-# version=2015.07.12.r1
+# version=2015.07.12.r2
+#
+# Latest version available at https://github.com/shmick/pi-scripts/
 #
 # Requires WebIOPi // https://code.google.com/p/webiopi/
 #
-# Check https://github.com/shmick/pi-scripts/ for latest version
-#
-# https://twitter.com/shmick 
-# email: mordoor/ww0/ca 
+# Contact: https://twitter.com/shmick || mordoor_AT_ww0_d0t_ca 
 
 WebIOPiURL="http://localhost:8000"
+TMPDIR="/var/tmp"
 
-WebIOPiStatus=$(curl -s -o /dev/null -w "%{http_code}" $WebIOPiURL)
-if [ "$WebIOPiStatus" != "200" ]
-then
-echo "sorry, WebIOPi doesn't appear to be running"
-exit 1
-fi
-
+### Begin Auto Close Config Section 
 # Set this to false if you don't want to enable the auto close feature
 AutoClose=true
-
-# Default is 8:30PM till 7AM
-# Set these to "0" if you always want it to check
+# Default is 8:30PM till 7AM. For no time limit, set both to 0
 StartTime="2030"
 EndTime="700"
-
 # How long the door is allowed to remain open during the hours of StartTime and EndTime
 MaxMinutes="30"
+# Number of door close attempts per door
+MaxCloseTries="3"
+### End Auto Close Config Section 
 
+### Begin Twitter config section
 # Set to true to enable sending a tweet
 Twitter=false
-
-# Change to "@whateveryouwant" to send a tweet
+# Change to "@yourtwitteraccount" to add a recipient
 TweetTo=""
+#
+TWEETCMD="python $HOME/pi-scripts/tweet.py"
+### End Twitter config section
 
-# Don't change these unless you need to
-TMPDIR="/var/tmp"
+### There's nothing to change below this line.
 NorthDoorStateFile="$TMPDIR/ndstate"
 SouthDoorStateFile="$TMPDIR/sdstate"
 NorthDoorLockFile="$TMPDIR/ndLockFile"
@@ -46,7 +42,15 @@ SouthDoorClosing="$TMPDIR/sdClosing"
 NorthDoorTweet="$TMPDIR/ndTweet"
 SouthDoorTweet="$TMPDIR/sdTweet"
 
-TWEETCMD="python $HOME/pi-scripts/tweet.py"
+CheckForWebIOPi()
+{
+WebIOPiStatus=$(curl -s -o /dev/null -w "%{http_code}" $WebIOPiURL)
+if [ "$WebIOPiStatus" != "200" ]
+then
+echo "sorry, WebIOPi doesn't appear to be running"
+exit 1
+fi
+}
 
 DoorStatus()
 {
@@ -193,7 +197,7 @@ if [ ! -f $LockFile ] || [ ! -f $InProgress ]
 then
 	touch $InProgress
 	count=1
-	while [ $count -le 3 ] && [ "$DoorState" = "open" ]
+	while [ $count -le "$MaxCloseTries" ] && [ "$DoorState" = "open" ]
 	do
 	curl -o /dev/null -d "" $WebIOPiURL/garage/$1/button
 	sleep 20
@@ -226,6 +230,7 @@ then
 fi
 }      
 
+CheckForWebIOPi
 GatherData
 StateCheckAndUpdate
 CheckAutoClose
