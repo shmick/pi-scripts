@@ -1,19 +1,18 @@
 #!/bin/bash
 # mordoor.sh - Monitor and control the garage doors
-# version=2015.07.11.r2
+# version=2015.07.12.r1
 #
 # Requires WebIOPi // https://code.google.com/p/webiopi/
-#
-# 0 = closed
-# 1 = open
 #
 # Check https://github.com/shmick/pi-scripts/ for latest version
 #
 # https://twitter.com/shmick 
 # email: mordoor/ww0/ca 
 
-WebIOPi=$(curl -vs -m 3 -o /dev/null http://localhost:8000/ 2>&1 | grep "200 OK")
-if [ -z "$WebIOPi" ]
+WebIOPiURL="http://localhost:8000"
+
+WebIOPiStatus=$(curl -s -o /dev/null -w "%{http_code}" $WebIOPiURL)
+if [ "$WebIOPiStatus" != "200" ]
 then
 echo "sorry, WebIOPi doesn't appear to be running"
 exit 1
@@ -30,25 +29,29 @@ EndTime="700"
 # How long the door is allowed to remain open during the hours of StartTime and EndTime
 MaxMinutes="30"
 
+# Change to "@whateveryouwant" to send a tweet
+TweetTo=""
+
 # Don't change these unless you need to
 TMPDIR="/var/tmp"
-
 NorthDoorStateFile="$TMPDIR/ndstate"
 SouthDoorStateFile="$TMPDIR/sdstate"
-
 NorthDoorLockFile="$TMPDIR/ndLockFile"
 SouthDoorLockFile="$TMPDIR/sdLockFile"
-
 NorthDoorClosing="$TMPDIR/ndClosing"
 SouthDoorClosing="$TMPDIR/sdClosing"
+NorthDoorTweet="$TMPDIR/ndTweet"
+SouthDoorTweet="$TMPDIR/sdTweet"
 
 TWEETCMD="python $HOME/pi-scripts/tweet.py"
 
 DoorStatus()
 {
-	NorthStatus=$(curl -s http://localhost:8000/garage/north/status)
-	SouthStatus=$(curl -s http://localhost:8000/garage/south/status)
+	NorthStatus=$(curl -s "$WebIOPiURL"/garage/north/status)
+	SouthStatus=$(curl -s "$WebIOPiURL"/garage/south/status)
 
+	# Give the status codes useable names
+	# 0 = closed, 1 = open
 	case $NorthStatus in
 	0) NorthStatus=closed ;; 1) NorthStatus=open ;;
 	esac
@@ -83,7 +86,7 @@ then
 		# If the door has changed from open to closed then
 		# delete the lockfile that prevents the auto close
 		# routine from running after a failed close attempt
-		rm -f $NorthDoorLockFile
+		RemoveLocks north
 
 	elif [ "$NorthStatus" = "open" ] && [ "$NdoorSTATE" = "closed"  ]
 	then
@@ -98,7 +101,7 @@ then
 		# If the door has changed from open to closed then
 		# delete the lockfile that prevents the auto close
 		# routine from running after a failed close attempt
-		rm -f $SouthDoorLockFile
+		RemoveLocks south
 
 	elif [ "$SouthStatus" = "open" ] && [ "$SDoorSTATE" = "closed"  ]
 	then
@@ -142,6 +145,21 @@ then
 fi
 }
 
+RemoveLocks()
+{
+case $1 in
+north)
+LockFile="$NorthDoorLockFile"
+TweetFile="$NorthDoorTweet"
+;;
+south)
+LockFile="$SouthDoorLockFile" 
+TweetFile="$SouthDoorTweet"
+;;
+esac
+rm -f $LockFile $TweetFile
+}
+
 SelectDoor()
 {
 case $1 in
@@ -150,12 +168,14 @@ DoorName="North"
 DoorState="$NorthStatus" 
 LockFile="$NorthDoorLockFile" 
 InProgress="$NorthDoorClosing"
+TweetFile="$NorthDoorTweet"
 ;;
 south)
 DoorName="South"
 DoorState="$SouthStatus"
 LockFile="$SouthDoorLockFile" 
 InProgress="$SouthDoorClosing"
+TweetFile="$SouthDoorTweet"
 ;;
 esac
 }
@@ -164,54 +184,45 @@ CloseDoor()
 {
 SelectDoor $@
 
-if [ -f $LockFile ] || [ -f $InProgress ]
+# If a lockfile exists from a previously failed close attemp
+# or a door close is currently in progress, dont do anything
+if [ ! -f $LockFile ] || [ ! -f $InProgress ]
 then
-exit 1
-fi
+	touch $InProgress
+	count=1
+	while [ $count -le 3 ] && [ "$DoorState" = "open" ]
+	do
+	curl -o /dev/null -d "" $WebIOPiURL/garage/$1/button
+	sleep 20
+	(( count ++ ))
+	DoorStatus
+	SelectDoor $@
+	done
+	rm -f $InProgress
 
-#
-touch $InProgress
-count=1
-while [ $count -le 3 ] && [ "$DoorState" = "open" ]
-do
-curl -d "" http://localhost:8000/garage/$1/button
-sleep 20
-(( count ++ ))
-DoorStatus
-SelectDoor $@
-done
-
-if [ "$DoorState" = "open" ]
-then
-touch $LockFile
-else
-rm -f $InProgress
-fi
-}
-
-# Sending a tweet is not enabled yet.
-CreateTweet()
-{
-if [ "$Type" = "" ]
-then
-	exit
-else
-	TweetString="ERROR: The $DoorName door was not successfully closed" 
+	# If the door is still open, write out a lockfile to prevent
+	# the door from being auto closed again. The lockfile will be
+	# removed once the door has returned to a closed state
+	if [ "$DoorState" = "open" ]
+	then
+	touch $LockFile
+	SendTweet
+	fi
 fi
 }
 
 SendTweet()
 {
-if [ "$TweetString" = "" ]
+# Send a tweet only once. The TweetFile will also be removed once the
+# door has returned to a closed state.
+if [ ! -f "$TweetFile" ]
 then
-	exit
-else
+	TweetString="ERROR: Unable to auto close $DoorName door at ${Time} $TweetTo" 
 	$TWEETCMD "$TweetString"
+	touch $TweetFile
 fi
 }      
 
 GatherData
 StateCheckAndUpdate
-#CreateTweet
-#SendTweet
 CheckAutoClose
