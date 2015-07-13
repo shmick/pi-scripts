@@ -6,6 +6,9 @@
 #
 # Requires WebIOPi // https://code.google.com/p/webiopi/
 #
+# For details on the hardware being used and the WebIOPi config file
+# entries, see the mordoor.txt files located at https://github.com/shmick/pi-scripts/
+#
 # Contact: https://twitter.com/shmick || mordoor_AT_ww0_d0t_ca 
 
 WebIOPiURL="http://localhost:8000"
