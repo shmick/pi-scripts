@@ -35,6 +35,12 @@ TweetTo=""
 TWEETCMD="python $HOME/pi-scripts/tweet.py"
 ### End Twitter config section
 
+# Nest home/away mode.
+NestMode=false
+# Close after 10 minutes if the Nest is in Away mode.
+NestAwayMins="10"
+NestInfoFile="/ramdisk/nest-info.txt"
+
 ### There's nothing to change below this line.
 NorthDoorStateFile="$TMPDIR/ndstate"
 SouthDoorStateFile="$TMPDIR/sdstate"
@@ -73,6 +79,7 @@ DoorStatus()
 GatherData()
 {
 	DoorStatus
+	CurrTime=$(date +%s)
 	HourMin=$(date +%_H%M)
 	Time=$(date +%H:%M)
 	TweetString=""
@@ -118,8 +125,14 @@ then
 		echo open > $SouthDoorStateFile
 	fi
 
-	NDoorAge=$(find $NorthDoorStateFile -mmin +$MaxMinutes)
-	SDoorAge=$(find $SouthDoorStateFile -mmin +$MaxMinutes)
+	NDoorEpoc=$(stat -c %Z $NorthDoorStateFile)
+	NDoorSecs=$(( $CurrTime - $NDoorEpoc ))	
+	NDoorMins=$(( $NDoorSecs / 60 ))
+
+	SDoorEpoc=$(stat -c %Z $SouthDoorStateFile)
+	SDoorSecs=$(( $CurrTime - $SDoorEpoc ))	
+	SDoorMins=$(( $SDoorSecs / 60 ))
+
 else
 	# Create the North and South state files based on the current status
 	# of each door
@@ -127,6 +140,32 @@ else
 	then
 		echo $NorthStatus > $NorthDoorStateFile
 		echo $SouthStatus > $SouthDoorStateFile
+	fi
+fi
+}
+
+CheckNestMode()
+{
+	if [ "$NestMode" = "true" ]
+	then
+	NestAwayStatus
+	NestAutoClose
+	fi
+}
+
+NestAwayStatus()
+{
+if [ ! -f "$NestInfoFile" ]
+then
+NestStatus=home
+else
+NestAway=$(grep C_TargetTemp $NestInfoFile | awk '{print $2}' | grep ^1.00)
+
+	if [ "$NestAway" = "1.00" ]
+	then 
+	NestStatus=away
+	else
+	NestStatus=home
 	fi
 fi
 }
@@ -143,17 +182,34 @@ AutoClose()
 {
 if [ "$HourMin" -ge "$StartTime" ] || [ "$HourMin" -le "$EndTime" ]
 then
-	if [ -n "$NDoorAge" ] && [ "$NorthStatus" = "open" ]
+	if [ "$NDoorMins" -ge "$MaxMinutes" ] && [ "$NorthStatus" = "open" ]
 	then
 	CloseDoor north
 	fi
 
-	if [ -n "$SDoorAge" ] && [ "$SouthStatus" = "open" ]
+	if [ "$SDoorMins" -ge "$MaxMinutes" ] && [ "$SouthStatus" = "open" ]
 	then
 	CloseDoor south
 	fi
 fi
 }
+
+NestAutoClose() 
+{
+if [ "$NestStatus" = "away" ]
+then
+	if [ "$NDoorMins" -ge "$NestAwayMins" ] && [ "$NorthStatus" = "open" ]
+	then
+	CloseDoor north
+	fi
+
+	if [ "$SDoorMins" -ge "$NestAwayMins" ] && [ "$SouthStatus" = "open" ]
+	then
+	CloseDoor south
+	fi
+fi
+}
+
 
 RemoveLocks()
 {
@@ -236,4 +292,5 @@ fi
 CheckForWebIOPi
 GatherData
 StateCheckAndUpdate
+CheckNestMode
 CheckAutoClose
