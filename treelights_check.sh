@@ -1,42 +1,47 @@
 #!/bin/bash
 
-WEMODEVICE="Christmas Tree"
+# Requires the following:
+#
+# 1: Nest info ( https://github.com/shmick/pi-scripts/get-nest-info.{sh,php}
+#
+# 2: Ouimeaux ( https://ouimeaux.readthedocs.org/en/latest/ )
+#
+# 3: JQ ( apt-get install jq # ( https://stedolan.github.io/jq/ )
 
-WemoToggle () {
-curl -s -o /dev/null -X POST http://localhost:5000/api/device/WeMo%20Christmas%20Tree?state=$MODE
-}
+OuimeauxURL=http://localhost:5000/api/device/
+WeMoDevice="WeMo Christmas Tree"
+UrlDevice=$(echo $WeMoDevice | sed 's/ /%20/g')
 
-READFILE=/ramdisk/nest-info.txt
+NestInfoFile=/ramdisk/nest-info.txt
 
-if [ ! -f "$READFILE" ]
+if [ ! -f "$NestInfoFile" ]
 then
 exit 1
 fi
 
-STATE=$(curl -s http://localhost:5000/api/device/WeMo%20Christmas%20Tree | grep state)
-STATE_ON=$(echo $STATE | grep 1)
-STATE_OFF=$(echo $STATE | grep 0)
+DeviceState=$(curl -s ${OuimeauxURL}${UrlDevice} | jq '.state')
 
-AWAY=$(grep C_TargetTemp $READFILE | awk '{print $2}' | grep ^1.00)
+TargetTemp=$(awk '$1 ~ "TargetTemp" { print $2 }' $NestInfoFile)
 
-if [ "$AWAY" = "1.00" ]
-then STATUS=Away
+case $TargetTemp in 
+1.00)
+NestStatus=Away
 MODE=off
-else
-STATUS=Home
+;;
+*)
+NestStatus=Home
 MODE=on
-fi
+;;
+esac
 
-if [ "$STATUS" = "Home" ]
+WemoToggle () {
+curl -s -o /dev/null -X POST ${OuimeauxURL}${UrlDevice}?state=$MODE
+}
+
+if [ "$NestStatus" = "Home" ] && [ "$DeviceState" = "0" ]
 then
-	if [ "$STATE_ON" = "" ]
-	then
-	WemoToggle
-	fi
-elif [ "$STATUS" = "Away" ]
+WemoToggle
+elif [ "$NestStatus" = "Away" ] && [ "$DeviceState" = "1" ]
 then
-	if [ "$STATE_OFF" = "" ]
-	then
-	WemoToggle
-	fi
+WemoToggle
 fi
