@@ -12,12 +12,13 @@ fi
 rtlcheck
 
 RTLP="/usr/local/bin/rtl_power"
+LOGDIR="${HOME}/scans"
 
 # Senn G Band
 FREQ_START="566M"
 FREQ_END="608M"
 
-# MiPro 
+# MiPro
 #FREQ_START="620M"
 #FREQ_END="644M"
 
@@ -26,16 +27,16 @@ GAIN="35"
 INTERVAL="5"
 
 filenum () {
-LASTFILE=$(ls $HOME/scans | tail -1 | grep "scan-[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9].log") 
+LASTFILE=$(ls $HOME/scans | tail -1 | grep "scan-[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9].log")
 
 if [ "$?" -ge 1 ]
 then
 FILENUM="100000000"
 else
-LASTNUM="$(basename $LASTFILE .log | awk -F- '{print $2}')"
+LASTNUM="$(basename $LASTFILE .log | sed 's/scan-//')"
 FILENUM="$(( LASTNUM + 1 ))"
 fi
-LOG="${HOME}/scans/scan-${FILENUM}.log"
+LOG="$LOGDIR/scan-${FILENUM}.log"
 }
 
 while true
