@@ -1,5 +1,7 @@
 #!/bin/bash
 
+#curl -s https://raw.githubusercontent.com/shmick/pi-scripts/master/rtl-sdr-build.sh | bash
+
 sudo apt-get update
 sudo apt-get install -y libusb-1.0-0-dev pkg-config ca-certificates git-core cmake build-essential --no-install-recommends
 sudo apt-get clean
