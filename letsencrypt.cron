@@ -1,0 +1,14 @@
+#!/bin/bash
+
+if [[ $EUID -ne 0 ]]
+then
+echo "This script must be run as root" 
+exit 1
+fi
+
+OUTPUT=$(/usr/local/etc/letsencrypt.sh/letsencrypt.sh -c)
+echo "$OUTPUT" | grep Renewing
+if [ $? = 0 ]
+then
+service nginx reload
+fi
