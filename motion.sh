@@ -8,7 +8,7 @@ CAM_ADDR="127.0.0.1"
 
 MotionDetect() {
     ENMODE="$1"
-    curl -u $CAM_USER:$CAM_PASS "http://$CAM_ADDR/cgi-bin/configManager.cgi?action=setConfig&MotionDetect\[0\].Enable=$ENMODE"
+    curl --digest -u $CAM_USER:$CAM_PASS "http://$CAM_ADDR/cgi-bin/configManager.cgi?action=setConfig&MotionDetect\[0\].Enable=$ENMODE"
 }
 
 case "$1" in
