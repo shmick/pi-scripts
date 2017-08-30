@@ -15,3 +15,5 @@ Heat Tweet requires:
 Tree Lights requires:
 
 * [ouimeaux](https://github.com/iancmcc/ouimeaux)
+
+Tip Jar: BTC 1BFSzGSSU5LazfYv8rYYxzT3M3GRf9EPov
